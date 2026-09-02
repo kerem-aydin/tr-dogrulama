@@ -1,0 +1,10 @@
+{
+  "name": "tr-dogrulama",
+  "version": "0.1.0",
+  "description": "Turk isletme verisiyle calisirken defalarca yeniden yazilan kucuk seyler: Turkce duyarli kucultme, telefon (444'lu hatlar dahil), kurumsal rol e-postasi ayrimi, TCKN, VKN, IBAN, isletme-site eslestirme. Bagimlilik yok.",
+  "type": "module",
+  "main": "src/index.js",
+  "license": "MIT",
+  "scripts": { "test": "node --test test/*.test.js" },
+  "keywords": ["turkce", "turkish", "telefon", "phone", "iban", "tckn", "vkn", "validation"]
+}
