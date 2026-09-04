@@ -54,7 +54,14 @@ export function sadelestir(metin) {
  */
 export function telefonSadelestir(girdi) {
   let r = String(girdi ?? "").replace(/\D/g, "");
-  if (r.startsWith("90") && r.length > 10) r = r.slice(2);
+  if (r.startsWith("00")) r = r.slice(2);
+  // Ülke kodu, ancak kalan kısım geçerli bir ulusal numaraya benziyorsa atılır.
+  // 🔴 "+90 444 1 444" toplam 9 hanedir; "uzunluk > 10" varsayan bir kontrol
+  // ülke kodunu atmaz ve numara sessizce elenir. Kısa hatlar bu yüzden kaybolur.
+  if (r.startsWith("90")) {
+    const kalan = r.slice(2).replace(/^0+/, "");
+    if (kalan.length >= 10 || (kalan.length === 7 && kalan.startsWith("444"))) r = kalan;
+  }
   r = r.replace(/^0+/, "");
   if (r.length === 7 && r.startsWith("444")) return r;
   return r.length >= 10 ? r.slice(-10) : "";

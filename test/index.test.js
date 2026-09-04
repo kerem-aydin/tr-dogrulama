@@ -42,6 +42,22 @@ test("444'lü kurumsal hat 7 hane olarak korunur", () => {
   assert.notEqual(telefonSadelestir("444 99 33"), "");
 });
 
+test("444'lü hat ülke koduyla yazılınca da korunur", () => {
+  /* 🔴 Bu vaka bir kusuru yakaladı: "+90 444 1 444" toplam 9 hanedir ve
+     "uzunluk > 10 ise ülke kodunu at" kuralı bu kapıdan geçmez. Numara
+     hata vermeden boş dönüyordu — kütüphanenin önlemek için var olduğu şey. */
+  for (const b of ["+90 444 1 444", "90 444 1 444", "0090 444 1 444", "+904441444"]) {
+    assert.equal(telefonSadelestir(b), "4441444", b);
+  }
+  assert.ok(telefonAyniMi("+90 444 1 444", "444 14 44"));
+});
+
+test("ülke kodu yalnız kalan geçerliyse atılır", () => {
+  assert.equal(telefonSadelestir("0090 532 111 22 33"), "5321112233");
+  /* "90" ile başlayan ama ülke kodu OLMAYAN bir şey kırpılmamalı. */
+  assert.equal(telefonSadelestir("9012"), "");
+});
+
 test("eksik numara boş döner, kabul edilmez", () => {
   for (const kotu of ["0533 112 23", "123", "", null, "abc"]) {
     assert.equal(telefonSadelestir(kotu), "", String(kotu));
