@@ -1,6 +1,6 @@
 /**
  * tr-dogrulama — Türk işletme verisiyle çalışırken defalarca yeniden yazılan
- * küçük şeyler, bir kez doğru yazılmış hâli.
+ * küçük şeyler, testleriyle birlikte tek yerde.
  *
  * Hiçbiri zor değil. Hepsi, elle yazıldığında sessizce yanlış çalışıyor:
  * hata vermez, uyarı vermez, sadece bir kayıt yanlış eşleşir ya da bir mail
@@ -53,8 +53,14 @@ export function sadelestir(metin) {
  * sessizce eler. Türkiye'de kurumsal numaraların büyük kısmı böyle.
  */
 export function telefonSadelestir(girdi) {
-  let r = String(girdi ?? "").replace(/\D/g, "");
+  const ham = String(girdi ?? "");
+  let r = ham.replace(/\D/g, "");
+  // "+" ya da "00" ile yazılmış numara uluslararası biçimdedir. Ülke kodu 90
+  // değilse yabancı numaradır; son 10 hanesini almak onu bir Türk numarasına
+  // benzetir ve yanlış kişiyle eşleştirir.
+  const uluslararasi = /^\s*(\+|00)/.test(ham);
   if (r.startsWith("00")) r = r.slice(2);
+  if (uluslararasi && !r.startsWith("90")) return "";
   // Ülke kodu, ancak kalan kısım geçerli bir ulusal numaraya benziyorsa atılır.
   // 🔴 "+90 444 1 444" toplam 9 hanedir; "uzunluk > 10" varsayan bir kontrol
   // ülke kodunu atmaz ve numara sessizce elenir. Kısa hatlar bu yüzden kaybolur.
@@ -64,7 +70,9 @@ export function telefonSadelestir(girdi) {
   }
   r = r.replace(/^0+/, "");
   if (r.length === 7 && r.startsWith("444")) return r;
-  return r.length >= 10 ? r.slice(-10) : "";
+  // Tam 10 hane. Fazlası kırpılmaz: fazla hane, numaranın başka bir ülkeye
+  // ya da yanlış yazıma ait olduğunu gösterir.
+  return r.length === 10 ? r : "";
 }
 
 /** İki telefon aynı numarayı mı gösteriyor. Biçimleri farklı olabilir. */
@@ -73,7 +81,7 @@ export function telefonAyniMi(a, b) {
   return x !== "" && x === telefonSadelestir(b);
 }
 
-/** Okunabilir biçim: "0212 000 12 34" ya da "444 99 33". */
+/** Okunabilir biçim: "0212 000 12 34" ya da "444 00 01". */
 export function telefonYaz(girdi) {
   const r = telefonSadelestir(girdi);
   if (r.length === 7) return `${r.slice(0, 3)} ${r.slice(3, 5)} ${r.slice(5)}`;
@@ -131,9 +139,10 @@ export function epostaTuru(adres) {
   if (!EPOSTA.test(a)) return { gecerli: false, rol: false, kisisel: false, sebep: "geçerli bir e-posta biçimi değil" };
 
   const yerel = a.split("@")[0];
-  const sadeYerel = yerel.replace(/[^a-z]/g, "");
 
-  if (ROL_ON_EKLERI.has(yerel) || ROL_ON_EKLERI.has(sadeYerel)) {
+  // Tam eşleşme. "info123" ya da "info.ahmet" beyaz listede değildir; harf dışını
+  // silip "info"ya benzetmek, kişisel bir adresi rol adresi saymak demek.
+  if (ROL_ON_EKLERI.has(yerel)) {
     return { gecerli: true, rol: true, kisisel: false, sebep: "kurumsal rol adresi" };
   }
   if (KISISEL_UNVAN.test(yerel) || (yerel.includes(".") && !ROL_ON_EKLERI.has(yerel.split(".")[0]))) {

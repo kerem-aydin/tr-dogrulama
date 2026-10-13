@@ -2,7 +2,7 @@
 
 [![test](https://github.com/kerem-aydin/tr-dogrulama/actions/workflows/test.yml/badge.svg)](https://github.com/kerem-aydin/tr-dogrulama/actions/workflows/test.yml) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![license: MIT](https://img.shields.io/badge/license-MIT-blue)
 
-Validation and normalization for Turkish business data — written once, correctly.
+Validation and normalization for Turkish business data, in one place, with the tests that keep it honest.
 
 None of it is hard. All of it fails **silently** when written by hand: no error,
 no warning, just a record that matches the wrong company or an email that goes
@@ -15,7 +15,7 @@ No dependencies. Runs on Node 18+ and in the browser.
 import { kucult, telefonSadelestir, epostaTuru, tcKimlikGecerliMi } from "./src/index.js";
 
 kucult("IŞIK");                 // "ışık"   — plain toLowerCase gives "işik"
-telefonSadelestir("+90 444 1 444"); // "4441444" — 7-digit corporate line, not junk
+telefonSadelestir("+90 444 0 002"); // "4440002" — 7-digit corporate line, not junk
 epostaTuru("info@klinik.com");  // { rol: true, kisisel: false, ... }
 tcKimlikGecerliMi("10000000146"); // checksum-verified, not just length
 ```
@@ -31,7 +31,7 @@ tcKimlikGecerliMi("10000000146"); // checksum-verified, not just length
 | Banking | `ibanGecerliMi` · `ibanYaz` |
 | Matching | `ayirtEdiciKelimeler` · `isletmeEslesmesi` · `GENEL_KELIMELER` |
 
-## Four details worth naming
+## Five details worth naming
 
 **`"I".toLowerCase()` is wrong in Turkish.** JavaScript returns `"i"`. The
 lowercase of `I` in Turkish is `ı`. So `"IŞIK"` becomes `"işik"` instead of
@@ -53,10 +53,17 @@ thing that did not match was the phone number. So the rule in `isletmeEslesmesi`
 is: **if the phone is known, the phone must match** — otherwise it is not a
 match, no matter what else agrees.
 
+**A foreign number is not a Turkish number with extra digits.** `+44 20 7946 0958`
+has twelve digits; taking the last ten turns it into a valid-looking Istanbul
+number. Numbers written with `+` or `00` and a country code other than 90 are
+rejected, and so is any number with more than ten national digits.
+
+All numbers, names and domains in the tests are made up.
+
 ## Tests
 
 ```bash
-node --test test/*.test.js    # 28 cases, no browser, no dependencies
+node --test test/*.test.js    # 32 cases, no browser, no dependencies
 ```
 
 ## License
@@ -68,8 +75,8 @@ MIT.
 
 ## Türkçe
 
-Türk işletme verisiyle çalışırken defalarca yeniden yazılan küçük şeylerin bir
-kez doğru yazılmış hâli.
+Türk işletme verisiyle çalışırken defalarca yeniden yazılan küçük şeyler,
+onları doğru tutan testleriyle birlikte tek yerde.
 
 Hiçbiri zor değil. Hepsi, elle yazıldığında **sessizce** yanlış çalışıyor: hata
 vermez, uyarı vermez, sadece bir kayıt yanlış eşleşir ya da bir mail yanlış
@@ -82,7 +89,7 @@ Bağımlılık yok. Node 18+ ve tarayıcı, ikisinde de çalışır.
 import { kucult, telefonSadelestir, epostaTuru, tcKimlikGecerliMi } from "./src/index.js";
 
 kucult("IŞIK");                     // "ışık"   — düz toLowerCase "işik" verir
-telefonSadelestir("+90 444 1 444"); // "4441444" — 7 haneli kurumsal hat, çöp değil
+telefonSadelestir("+90 444 0 002"); // "4440002" — 7 haneli kurumsal hat, çöp değil
 epostaTuru("info@klinik.com");      // { rol: true, kisisel: false, ... }
 tcKimlikGecerliMi("10000000146");   // sağlama basamağı kontrollü, sadece uzunluk değil
 ```
@@ -98,7 +105,7 @@ tcKimlikGecerliMi("10000000146");   // sağlama basamağı kontrollü, sadece uz
 | Banka | `ibanGecerliMi` · `ibanYaz` |
 | Eşleştirme | `ayirtEdiciKelimeler` · `isletmeEslesmesi` · `GENEL_KELIMELER` |
 
-### Adı konması gereken dört ayrıntı
+### Adı konması gereken beş ayrıntı
 
 **`"I".toLowerCase()` Türkçe'de yanlıştır.** JavaScript `"i"` döndürür.
 Türkçe'de `I`'nın küçüğü `ı`'dır. "IŞIK" bu yüzden "ışık" değil "işik" olur ve
@@ -119,10 +126,17 @@ servisin sitesini getirdi. Ad tutuyordu, alan adı tutuyordu; tutmayan tek şey
 telefondu. `isletmeEslesmesi` bu yüzden şunu kural yapıyor: **telefon
 biliniyorsa telefon eşleşmesi şarttır**, başka her şey tutsa bile.
 
+**Yabancı numara, fazla haneli bir Türk numarası değildir.** `+44 20 7946 0958`
+on iki hanedir; son on hanesini almak onu geçerli görünen bir İstanbul numarasına
+çevirir. `+` ya da `00` ile yazılıp ülke kodu 90 olmayan numaralar ve on haneden
+uzun ulusal numaralar reddedilir.
+
+Testlerdeki bütün numaralar, adlar ve alan adları uydurmadır.
+
 ### Test
 
 ```bash
-node --test test/*.test.js    # 28 vaka, tarayıcısız, bağımlılıksız
+node --test test/*.test.js    # 32 vaka, tarayıcısız, bağımlılıksız
 ```
 
 ### Lisans

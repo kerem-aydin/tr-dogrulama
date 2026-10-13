@@ -26,6 +26,8 @@ test("sadeleştirme aksanı düşürür", () => {
 });
 
 /* ── Telefon ──────────────────────────────────────────────────────────────── */
+/* Bu dosyadaki bütün numaralar uydurma: "000" ile başlayan abone numarası ve
+   "500" cep kodu Türkiye'de verilmiyor. İşletme ve alan adları da uydurma. */
 
 test("aynı numara farklı yazımlarda aynı değere iner", () => {
   const beklenen = "2120001234";
@@ -36,30 +38,45 @@ test("aynı numara farklı yazımlarda aynı değere iner", () => {
 });
 
 test("444'lü kurumsal hat 7 hane olarak korunur", () => {
-  assert.equal(telefonSadelestir("444 99 33"), "4449933");
-  assert.equal(telefonSadelestir("4449933"), "4449933");
+  assert.equal(telefonSadelestir("444 00 01"), "4440001");
+  assert.equal(telefonSadelestir("4440001"), "4440001");
   /* "en az 10 hane" varsayan kod bunu sessizce eler. */
-  assert.notEqual(telefonSadelestir("444 99 33"), "");
+  assert.notEqual(telefonSadelestir("444 00 01"), "");
 });
 
 test("444'lü hat ülke koduyla yazılınca da korunur", () => {
-  /* 🔴 Bu vaka bir kusuru yakaladı: "+90 444 1 444" toplam 9 hanedir ve
+  /* 🔴 Bu vaka bir kusuru yakaladı: "+90 444 0 002" toplam 9 hanedir ve
      "uzunluk > 10 ise ülke kodunu at" kuralı bu kapıdan geçmez. Numara
      hata vermeden boş dönüyordu — kütüphanenin önlemek için var olduğu şey. */
-  for (const b of ["+90 444 1 444", "90 444 1 444", "0090 444 1 444", "+904441444"]) {
-    assert.equal(telefonSadelestir(b), "4441444", b);
+  for (const b of ["+90 444 0 002", "90 444 0 002", "0090 444 0 002", "+904440002"]) {
+    assert.equal(telefonSadelestir(b), "4440002", b);
   }
-  assert.ok(telefonAyniMi("+90 444 1 444", "444 14 44"));
+  assert.ok(telefonAyniMi("+90 444 0 002", "444 00 02"));
 });
 
 test("ülke kodu yalnız kalan geçerliyse atılır", () => {
-  assert.equal(telefonSadelestir("0090 532 111 22 33"), "5321112233");
+  assert.equal(telefonSadelestir("0090 500 111 22 33"), "5001112233");
   /* "90" ile başlayan ama ülke kodu OLMAYAN bir şey kırpılmamalı. */
   assert.equal(telefonSadelestir("9012"), "");
 });
 
+test("yabancı numara Türk numarasına benzetilmez", () => {
+  /* 🔴 Codex denetimi yakaladı (13 Eki 2026): eski sürüm fazla haneyi kırpıp
+     son 10 haneyi alıyordu. "+44 20 7946 0958" böylece "0207 946 09 58" diye
+     bir Türk numarası oluyor ve yanlış kayıtla eşleşebiliyordu. */
+  for (const b of ["+44 20 7946 0958", "+1 212 555 0123", "0044 20 7946 0958", "+49 30 1234 5678"]) {
+    assert.equal(telefonSadelestir(b), "", b);
+  }
+  assert.ok(!telefonAyniMi("+44 20 7946 0958", "0207 946 09 58"));
+});
+
+test("fazla haneli numara kırpılmaz, reddedilir", () => {
+  assert.equal(telefonSadelestir("0212 000 12 34 5"), "");
+  assert.equal(telefonSadelestir("+90 212 000 12 34 5"), "");
+});
+
 test("eksik numara boş döner, kabul edilmez", () => {
-  for (const kotu of ["0533 112 23", "123", "", null, "abc"]) {
+  for (const kotu of ["0500 112 23", "123", "", null, "abc"]) {
     assert.equal(telefonSadelestir(kotu), "", String(kotu));
   }
 });
@@ -72,19 +89,19 @@ test("iki numara aynı mı", () => {
 
 test("okunabilir biçim", () => {
   assert.equal(telefonYaz("+902120001234"), "0212 000 12 34");
-  assert.equal(telefonYaz("4449933"), "444 99 33");
+  assert.equal(telefonYaz("4440001"), "444 00 01");
   assert.equal(telefonYaz("bozuk"), "");
 });
 
 test("cep telefonu ayırt edilir", () => {
-  assert.ok(cepMi("0533 111 22 33"));
+  assert.ok(cepMi("0500 111 22 33"));
   assert.ok(!cepMi("0212 000 12 34"));
-  assert.ok(!cepMi("444 99 33"));
+  assert.ok(!cepMi("444 00 01"));
 });
 
 test("metinden telefon toplama", () => {
-  const b = telefonlariBul("Bize ulaşın: 444 99 33 veya 0212 000 12 34 (faks 0212 000 12 35)");
-  assert.deepEqual(b.sort(), ["2120001234", "2120001235", "4449933"].sort());
+  const b = telefonlariBul("Bize ulaşın: 444 00 01 veya 0212 000 12 34 (faks 0212 000 12 35)");
+  assert.deepEqual(b.sort(), ["2120001234", "2120001235", "4440001"].sort());
 });
 
 /* ── E-posta ──────────────────────────────────────────────────────────────── */
@@ -110,6 +127,15 @@ test("belirsiz adres rol sayılmaz", () => {
   assert.ok(!t.rol);
   assert.ok(!t.kisisel);
   assert.match(t.sebep, /beyaz liste/);
+});
+
+test("rol adı yalnız tam eşleşirse rol sayılır", () => {
+  /* 🔴 Eski sürüm harf dışını silip karşılaştırıyordu: "info123" -> "info"
+     ve kişisel olabilecek bir adres rol adresi sayılıyordu. Beyaz liste
+     kuralının tersi. */
+  for (const a of ["info123@x.com", "info2026@x.com", "info_ahmet@x.com"]) {
+    assert.ok(!epostaTuru(a).rol, a);
+  }
 });
 
 test("bozuk biçim geçersiz", () => {
@@ -160,15 +186,34 @@ test("vergi numarası sağlaması gerçekten çalışıyor", () => {
   assert.ok(!vergiNoGecerliMi("12345678901"), "on bir hane VKN degil");
 });
 
+test("VKN sağlaması elle hesaplanmış örnekle tutuyor", () => {
+  /* Doğrulayıcının kendi seçtiği numaralarla değil, elle hesaplanmış bir
+     örnekle karşılaştırma. "000000000?" için dokuz basamağın katkıları:
+     t = (0 + 10 - i) % 10 -> 9, 8, 7, 6, 5, 4, 3, 2, 1
+     t = 9 ise 9, değilse t * 2^(10-i) mod 9 -> 9, 5, 5, 6, 7, 1, 6, 8, 2
+     toplam 49, sağlama basamağı (10 - 49 % 10) % 10 = 1. */
+  assert.ok(vergiNoGecerliMi("0000000001"));
+  for (let d = 0; d <= 9; d++) {
+    if (d !== 1) assert.ok(!vergiNoGecerliMi("000000000" + d), "son hane " + d);
+  }
+});
+
+/* Rastgele testler tohumlu: her koşuda aynı numaralar, başarısızlık tekrar üretilebilir. */
+function tohumlu(tohum) {
+  let x = tohum >>> 0;
+  return () => ((x = (Math.imul(x, 1664525) + 1013904223) >>> 0) / 2 ** 32);
+}
+
 test("VKN kabul oranı sağlama basamağına uyuyor", () => {
   /* Tek sağlama basamağı olan bir algoritmada rastgele numaraların yaklaşık
      onda biri geçerli çıkar. Oran çok düşükse algoritma fazla reddediyor,
      çok yüksekse sağlama hiç çalışmıyordur. Bu, uygulamayı KENDİ testiyle
      değil matematiğiyle karşılaştıran bir kontrol. */
+  const rastgele = tohumlu(2026);
   let gecerli = 0;
   const n = 20000;
   for (let i = 0; i < n; i++) {
-    const s = String(Math.floor(Math.random() * 1e10)).padStart(10, "0");
+    const s = String(Math.floor(rastgele() * 1e10)).padStart(10, "0");
     if (vergiNoGecerliMi(s)) gecerli++;
   }
   const oran = gecerli / n;
@@ -177,11 +222,12 @@ test("VKN kabul oranı sağlama basamağına uyuyor", () => {
 
 test("TCKN kabul oranı iki sağlama basamağına uyuyor", () => {
   /* İki sağlama basamağı: yaklaşık yüzde bir. */
+  const rastgele = tohumlu(1013);
   let gecerli = 0;
   const n = 20000;
   for (let i = 0; i < n; i++) {
-    const s = String(Math.floor(Math.random() * 9) + 1) +
-      String(Math.floor(Math.random() * 1e10)).padStart(10, "0").slice(0, 10);
+    const s = String(Math.floor(rastgele() * 9) + 1) +
+      String(Math.floor(rastgele() * 1e10)).padStart(10, "0").slice(0, 10);
     if (tcKimlikGecerliMi(s)) gecerli++;
   }
   const oran = gecerli / n;
@@ -191,6 +237,7 @@ test("TCKN kabul oranı iki sağlama basamağına uyuyor", () => {
 /* ── IBAN ─────────────────────────────────────────────────────────────────── */
 
 test("IBAN sağlaması", () => {
+  /* Yaygın kullanılan örnek IBAN (ISO 13616 örnek listesi); bir hesaba ait değil. */
   const gecerli = "TR330006100519786457841326";
   assert.ok(ibanGecerliMi(gecerli));
   assert.ok(ibanGecerliMi("tr33 0006 1005 1978 6457 8413 26"), "bosluk ve kucuk harf sorun degil");
