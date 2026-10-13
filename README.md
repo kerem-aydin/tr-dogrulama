@@ -1,5 +1,7 @@
 # tr-dogrulama
 
+[![test](https://github.com/kerem-aydin/tr-dogrulama/actions/workflows/test.yml/badge.svg)](https://github.com/kerem-aydin/tr-dogrulama/actions/workflows/test.yml) ![dependencies: 0](https://img.shields.io/badge/dependencies-0-brightgreen) ![license: MIT](https://img.shields.io/badge/license-MIT-blue)
+
 Validation and normalization for Turkish business data — written once, correctly.
 
 None of it is hard. All of it fails **silently** when written by hand: no error,
